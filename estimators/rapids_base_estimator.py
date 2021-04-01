@@ -7,6 +7,9 @@ from evalml.problem_types import ProblemTypes
 
 
 class RapidsEstimator(Estimator):
+    """
+    Base estimator for rapids. Mostly wraps the regular fit and predict with cudf conversion.
+    """
     hyperparameter_ranges = {}
     supported_problem_types = []
 
@@ -27,6 +30,10 @@ class RapidsEstimator(Estimator):
 
 
 class RapidsClassifier(RapidsEstimator):
+    """
+    Adds predict_proba func for classification models.
+    Defines the problem types to standard classification problem types (binary and multiclass)
+    """
     supported_problem_types = [ProblemTypes.BINARY, ProblemTypes.MULTICLASS]
 
     def predict_proba(self, X):

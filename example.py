@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# TODO add documentation, add README, add licence
-# TODO add hyperparameter_ranges
 import numpy as np
 from evalml.automl import AutoMLSearch
 from evalml.pipelines import BinaryClassificationPipeline
@@ -11,12 +9,14 @@ from skopt.space import Integer, Real
 from estimators.classifier.decision_tree import RapidsRf
 from estimators.classifier.k_neighbors import RapidsKNeighborsClassifier
 from estimators.classifier.linear_model import RapidsLogisticRegression
+from transformers.pca import RapidsConcatPCA
 
 
-class WidsPipeline(BinaryClassificationPipeline):
+class WidsExamplePipeline(BinaryClassificationPipeline):
     component_graph = {
         'Imputer': ['Imputer'],
-        'Random KNeighborsClassifier': [RapidsKNeighborsClassifier, 'Imputer'],
+        'Rapids PCA': [RapidsConcatPCA, 'Imputer'],
+        'Random KNeighborsClassifier': [RapidsKNeighborsClassifier, 'Rapids PCA'],
         'Linear Regression': [RapidsLogisticRegression, 'Imputer'],
         'Final RF Estimator': [RapidsRf, 'Random KNeighborsClassifier', 'Linear Regression']
     }
@@ -24,6 +24,9 @@ class WidsPipeline(BinaryClassificationPipeline):
     custom_hyperparameters = {
         'Imputer': {
             'numeric_impute_strategy': ['median', 'most_frequent', 'mean']
+        },
+        'Rapids PCA': {
+            'n_components': Integer(2, 20)
         },
         'Random KNeighborsClassifier': {
             "n_neighbors": Integer(3, 1000),
@@ -42,22 +45,15 @@ class WidsPipeline(BinaryClassificationPipeline):
     }
 
 
-def err_call(exception, traceback, automl, **kwargs):
-    raise exception
-
-
 iris = load_breast_cancer()
 X_train, X_test, y_train, y_test = train_test_split(iris.data.astype(np.float64),
                                                     iris.target.astype(np.float64), train_size=0.75, test_size=0.25,
                                                     random_state=42)
-# print(WidsPipeline(parameters={}).graph())
 
 automl = AutoMLSearch(X_train=X_train, y_train=y_train,
                       problem_type='binary', objective='auc',
-                      allowed_pipelines=[WidsPipeline],
-                      error_callback=err_call,
+                      allowed_pipelines=[WidsExamplePipeline],
                       max_iterations=3, max_batches=3)
 
 automl.search()
-
 print(automl.best_pipeline.parameters)
